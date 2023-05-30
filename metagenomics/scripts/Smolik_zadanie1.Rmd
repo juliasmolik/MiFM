@@ -1,0 +1,410 @@
+---
+title: 'Metagenomika i filogenetyka molekularna: Autotroficzne eugleniny w małych
+  zbiornikach wodnych'
+author: "Julia Smolik"
+output:
+  html_document:
+    df_print: paged
+---
+
+# Wczytanie bibliotek
+
+```{r}
+suppressWarnings(library(fansi))
+suppressWarnings(library(dplyr))
+suppressWarnings(library(plyr))
+suppressWarnings(library(vegan))
+suppressWarnings(library(tidyverse))
+suppressWarnings(library(ggplot2))
+suppressWarnings(library(phyloseq))
+suppressWarnings(library(qiime2R))
+suppressWarnings(library(picante))
+```
+
+# Wczytanie danych
+
+Wczytuję dane i tworzę obiekt Phyloseq
+```{r}
+phyloseq = qza_to_phyloseq(features = "../table_output.qza", tree = "../rooted_tree.qza",taxonomy = "../taxonomy.qza", metadata = "../sample_metadata.tsv")
+```
+
+# Podstawowe informacje o danych
+
+Sprawdzam liczbę taksonów i próbek, maksymalną i minimalną liczbę odczytów w próbce, poziomy taksonomiczne
+```{r}
+ntaxa(phyloseq)
+nsamples(phyloseq)
+max(sample_sums(phyloseq))
+min(sample_sums(phyloseq))
+rank_names(phyloseq)
+```
+
+# Filtrowanie danych - przedstawiciele Euglenida
+
+Wybieram tylko te odczyty, których przedstawiciele należą do Euglenida
+```{r}
+phyloseq_euglenida <- subset_taxa(phyloseq, Order == "Euglenida")
+```
+
+Sprawdzam liczbę taksonów i próbek, maksymalną i minimalną liczbę odczytów w próbce, poziomy taksonomiczne w filtrowanych danych
+```{r}
+ntaxa(phyloseq_euglenida)
+nsamples(phyloseq_euglenida)
+max(sample_sums(phyloseq_euglenida))
+min(sample_sums(phyloseq_euglenida))
+rank_names(phyloseq_euglenida)
+```
+
+W porównaniu do kompletnych danych, przefiltrowane dane są mniejsze - zawierają mniej taksonów, ale także mają mniejszą maksymalną i minimalną liczbę odczytów w próbce. Poziomy taksonomiczne pozostały bez zmian. Do dalszych analiz będę zatem używała odczytów, które należą do Euglenida. 
+
+# Łączenie ASV z tych samych gatunków
+
+Sprawdzam przyporządkowanie taksonomiczne
+```{r}
+tax_table(phyloseq_euglenida)[1:20, 1:7]
+```
+
+
+```{r}
+tax_table(phyloseq_euglenida)[1589:1609, 1:7]
+```
+
+Sprawdzam ile jest unikatowych przyporządkowań taksonomicznych na poziomie gatunku
+```{r}
+unique_euglenida = get_taxa_unique(phyloseq_euglenida, taxonomic.rank=rank_names(phyloseq_euglenida)[7])
+ntaxa(phyloseq_euglenida)
+length(unique_euglenida)
+```
+
+Ponieważ niewiele przyporządkowań na poziomie gatunku jest nieznanych (mało wartości NaN) i jest tylko 131 unikatowych gatunków, wydaje się, że połączenie ASV z tych samych gatunków będzie dobrą decyzją. Usprawni to obliczenia i pozwoli na bardziej czytelną wizualizację wyników, przy niewielkiej stracie danych. Dalsze analizy przeprowadzę zatem na ASV połączonych dla tych samych gatunków.
+
+```{r}
+phyloseq_glom <- tax_glom(phyloseq_euglenida, "Species")
+```
+
+
+Sprawdzam liczbę taksonów i próbek, maksymalną i minimalną liczbę odczytów w próbce, poziomy taksonomiczne w połączonych danych
+```{r}
+ntaxa(phyloseq_glom)
+nsamples(phyloseq_glom)
+max(sample_sums(phyloseq_glom))
+min(sample_sums(phyloseq_glom))
+rank_names(phyloseq_glom)
+```
+
+Połączenie ASV z tych samych gatunków zgodnie z oczekiwaniami zmiejszyło liczbę taksonów, ale w większości są to taksony, które się powtarzały. Nieznacznie zmieniły się również minimalna i maksymalna liczba odczytów w próbce, ale również jest to spodziewany wynik, ponieważ zmieniły się dane - połączono sekwencje z tych samych gatunków i odrzucono wartości NaN. Nie wydaje się jednak, żeby była to znacząca różnica w porównaniu z danymi niepołączonymi. Nie zmieniła się liczba próbek, ani poziomy taksonimiczne. 
+
+# Krzywa wysycenia
+
+Tworzę krzywą alfa-curve
+```{r}
+tab = data.frame(t(otu_table(phyloseq_glom)))
+#png(file="../images/alfa-curve.png", width=800, height=600, res=100)
+rarecurve(tab, step=50, cex=0.9, label=FALSE, col=rainbow(24), lwd = 3)
+#dev.off()
+```
+
+Na podstawie krzywej można stwierdzć, że liczba odczytów w najmniej licznej próbce wydaje się wystarczająca, żeby można było do tej wartości ograniczyć liczbę odczytów we wszystkich próbkach bez znaczącej straty informacji o bogactwie gatunkowym i różnorodności biologicznej. Najmniej liczna próbka zawiera 7268 odczytów. Jest to mniej więcej 1/3 liczebności odczytów w najbardziej licznej próbce, ale w porównaniu z resztą próbek ta wartość nie odbiega znacząco. Najprawdopodobniej pewne dane zostaną utracone, ale warto ograniczyć liczbę odczytów, ponieważ usprawni to obliczenia, a sama strata będzie niekrytyczna. Wszystkie próbki ograniczę zatem do 7268 odczytów.
+
+# Rarefaction
+
+Ograniczam liczbę odczytów we wszystkich próbkach
+```{r}
+phyloseq_rare <- rarefy_even_depth(phyloseq_glom, sample.size=min(sample_sums((phyloseq_glom))), replace=F)
+```
+
+Sprawdzam liczbę taksonów i próbek, maksymalną i minimalną liczbę odczytów w próbce, poziomy taksonomiczne w ograniczonych danych
+```{r}
+ntaxa(phyloseq_rare)
+nsamples(phyloseq_rare)
+max(sample_sums(phyloseq_rare))
+min(sample_sums(phyloseq_rare))
+rank_names(phyloseq_rare)
+```
+
+Po ograniczeniu danych nie utracono żadnych taksonów, ani żadnej próbki. Wydaje się, że ograniczenie odczytów w próbkach nie zaburzyło znacząco danych i ich różnorodności.
+
+
+# Analiza alfa-różnorodności
+
+```{r}
+c25 <- c(
+  "dodgerblue2", "#E31A1C", # red
+  "green4",
+  "#6A3D9A", # purple
+  "#FF7F00", # orange
+  "black", "gold1",
+  "skyblue2", "#FB9A99", # lt pink
+  "palegreen2",
+  "#CAB2D6", # lt purple
+  "#FDBF6F", # lt orange
+  "gray70", "khaki2",
+  "maroon", "orchid1", "deeppink1", "blue1", "steelblue4",
+  "darkturquoise", "green1", "yellow4", "yellow3",
+  "darkorange4", "brown"
+)
+```
+
+```{r}
+#png(file="../images/alfa_diversity.png", width=1500, height=800, res=100)
+plot_richness(phyloseq_rare, measures = c("Observed", "Shannon", "Simpson"), x ="rok" , color = "zbiornik")+ geom_boxplot(aes(fill = region), alpha=0.2) +  scale_color_manual(values = c25)+ scale_fill_manual(values = c25) +ggtitle("Alfa-różnorodność")+theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20), axis.text.x = element_text(angle=45, hjust=0.5))
+#dev.off()
+```
+
+```{r}
+diversity <- estimate_richness(phyloseq_rare, measures = c("Observed", "Shannon", "Simpson"))
+data_alphadiv <- cbind(sample_data(phyloseq_rare), diversity)
+```
+
+
+```{r}
+summary(aov(Observed ~ rok, data = data_alphadiv))
+```
+
+```{r}
+summary(aov(Observed ~ zbiornik, data = data_alphadiv))
+```
+
+
+```{r}
+summary(aov(Observed ~ region, data = data_alphadiv))
+```
+
+
+```{r}
+summary(aov(Shannon ~ rok, data = data_alphadiv))
+```
+
+```{r}
+summary(aov(Shannon ~ zbiornik, data = data_alphadiv))
+```
+
+```{r}
+summary(aov(Shannon ~ region, data = data_alphadiv))
+```
+
+
+```{r}
+summary(aov(Simpson ~ rok, data = data_alphadiv))
+```
+
+```{r}
+summary(aov(Simpson ~ zbiornik, data = data_alphadiv))
+```
+
+```{r}
+summary(aov(Simpson ~ region, data = data_alphadiv))
+```
+
+
+# Beta-różnorodność
+
+## Macierze odległości
+
+```{r}
+library(reshape2)
+plot_dist_as_heatmap <- function(dist, order = sampleOrder, title = NULL) {
+  data <- melt(as(dist, "matrix"))
+  colnames(data) <- c("x", "y", "distance")
+  if (!is.null(order)) {
+    data$x <- factor(data$x, levels = order)
+    data$y <- factor(data$y, levels = order)
+  }
+  p <- ggplot(data, aes(x = x, y = y, fill = distance)) + geom_tile() 
+  p <- p + theme(axis.title.x = element_blank(), 
+                 axis.title.y = element_blank(), 
+                 #axis.text.x = element_blank(), 
+                 #axis.text.y = element_blank()
+  )
+  p <- p + scale_fill_continuous(limits = c(0, 1))
+  if (!is.null(title)) {
+    p <- p + ggtitle(title)
+  }
+  return(p)
+}
+
+sampleOrder = levels(reorder(sample_names(phyloseq_rare), as.numeric(get_variable(phyloseq_rare, "zbiornik"))))
+```
+
+
+```{r}
+#png(file="../images/bray_dist.png", width=1200, height=800, res=100)
+bray_dist = distance(phyloseq_rare, method="bray")
+plot_dist_as_heatmap(bray_dist, title = "Bray-Curtis")+theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20), axis.text.x = element_text(angle=45, hjust=1))
+#dev.off()
+```
+
+```{r}
+#png(file="../images/unifrac_dist.png", width=1200, height=800, res=100)
+unifrac_dist= distance(phyloseq_rare, method="unifrac")
+plot_dist_as_heatmap(unifrac_dist, title = "Unifrac")+theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20), axis.text.x = element_text(angle=45, hjust=1))
+#dev.off()
+```
+
+
+```{r}
+#png(file="../images/jaccard_dist.png", width=1200, height=800, res=100)
+jaccard_dist = distance(phyloseq_rare, method="jaccard", binary = TRUE)
+plot_dist_as_heatmap(jaccard_dist, title = "Jaccard")+theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20), axis.text.x = element_text(angle=45, hjust=1))
+#dev.off()
+```
+
+## Ordynacje
+
+### Najprostsza ordynacja - dendogramy
+```{r}
+#png(file="../images/clustering_bray.png", width=1200, height=800, res=100)
+clustering_bray = hclust(bray_dist)
+plot(clustering_bray)
+#dev.off()
+```
+
+```{r}
+#png(file="../images/clustering_unifrac.png", width=1200, height=800, res=100)
+clustering_unifrac = hclust(unifrac_dist)
+plot(clustering_unifrac)
+#dev.off()
+```
+
+```{r}
+#png(file="../images/clustering_jaccard.png", width=1200, height=800, res=100)
+clustering_jaccard = hclust(jaccard_dist)
+plot(clustering_jaccard)
+#dev.off()
+```
+
+### NMDS
+
+```{r}
+#png(file="../images/ord_bray.png", width=1200, height=800, res=100)
+ord_bray <- ordinate(phyloseq_rare, method = "NMDS", distance = "bray")
+plot_ordination(phyloseq_rare, ord_bray, color="region", label = "rok") + scale_color_manual(values = c25)+ scale_fill_manual(values = c25)+ theme_light()+ geom_point(aes(color = region, shape = pora_roku), alpha = 0.9, size = 3.5)+stat_ellipse(geom = "polygon", aes(fill = zbiornik), alpha = 0.2, linetype =0) +ggtitle("Bray")+theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20))
+#dev.off()
+```
+
+```{r}
+#png(file="../images/ord_unifrac.png", width=1200, height=800, res=100)
+ord_unifrac <- ordinate(phyloseq_rare, method = "NMDS", distance = "unifrac")
+plot_ordination(phyloseq_rare, ord_unifrac, color="region", label = "rok") + scale_color_manual(values = c25)+ scale_fill_manual(values = c25)+ theme_light()+ geom_point(aes(color = region, shape = pora_roku), alpha = 0.9, size = 3.5)+stat_ellipse(geom = "polygon", aes(fill = zbiornik), alpha = 0.2, linetype =0) +ggtitle("Unifrac")+theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20))
+#dev.off()
+```
+
+```{r}
+#png(file="../images/ord_jaccard.png", width=1200, height=800, res=100)
+ord_jaccard <- ordinate(phyloseq_rare, method = "NMDS", distance = "jaccard")
+plot_ordination(phyloseq_rare, ord_jaccard, color="region", label = "rok") + scale_color_manual(values = c25)+ scale_fill_manual(values = c25)+ theme_light()+ geom_point(aes(color = region, shape = pora_roku), alpha = 0.9, size = 3.5)+stat_ellipse(geom = "polygon", aes(fill = zbiornik), alpha = 0.2, linetype =0) +ggtitle("Jaccard")+theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20))
+#dev.off()
+```
+## Anosim
+
+```{r}
+rok = get_variable(phyloseq_rare, "rok")
+zb = get_variable(phyloseq_rare, "zbiornik")
+region = get_variable(phyloseq_rare, "region")
+```
+
+```{r}
+anosim(bray_dist, grouping = rok)
+```
+
+```{r}
+anosim(bray_dist, grouping = zb)
+```
+
+```{r}
+anosim(bray_dist, grouping = region)
+```
+
+```{r}
+anosim(unifrac_dist, grouping = rok)
+```
+
+```{r}
+anosim(unifrac_dist, grouping = zb)
+```
+
+```{r}
+anosim(unifrac_dist, grouping = region)
+```
+
+```{r}
+anosim(jaccard_dist, grouping = rok)
+```
+
+```{r}
+anosim(jaccard_dist, grouping = zb)
+```
+
+```{r}
+anosim(jaccard_dist, grouping = region)
+```
+
+## Permanova
+
+```{r}
+metadane <- data.frame(sample_data(phyloseq_rare))
+```
+
+```{r}
+adonis(bray_dist ~ rok, data = metadane)$aov.tab
+```
+
+```{r}
+adonis(bray_dist ~ zbiornik, data = metadane)$aov.tab
+```
+
+```{r}
+adonis(bray_dist ~ region, data = metadane)$aov.tab
+```
+
+```{r}
+adonis(unifrac_dist ~ rok, data = metadane)$aov.tab
+```
+
+```{r}
+adonis(unifrac_dist ~ zbiornik, data = metadane)$aov.tab
+```
+
+```{r}
+adonis(unifrac_dist ~ region, data = metadane)$aov.tab
+```
+
+```{r}
+adonis(jaccard_dist ~ rok, data = metadane)$aov.tab
+```
+
+```{r}
+adonis(jaccard_dist ~ zbiornik, data = metadane)$aov.tab
+```
+
+```{r}
+adonis(jaccard_dist ~ region, data = metadane)$aov.tab
+```
+
+# Analiza składu taksonomicznego
+
+
+```{r}
+#png(file="../images/barplot.png", width=1500, height=800, res=100)
+plot_bar(phyloseq_rare, fill = "Genus", x="rok") + geom_bar(stat="identity") + theme_bw() + facet_wrap("zbiornik", scales="free") + scale_fill_manual(values=c25) +ggtitle("Wykres słupkowy składu taksonomicznego")+ theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20), axis.text.x = element_text(angle=0, hjust=0.5))
+#dev.off()
+```
+
+```{r}
+#png(file="../images/heatmap.png", width=3000, height=4000, res=300)
+edited = phyloseq_rare
+tax_table(edited)[,"Species"] <- gsub("D_10__", "", tax_table(edited)[,"Species"])
+plot_heatmap(edited, taxa.label="Species", low ="blue", high="red", na.value="white",taxa.order="Species")+facet_wrap("zbiornik", scales="free")+ggtitle("Mapa ciepła składu taksonomicznego")+ theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20), axis.text.x = element_text(angle=45, hjust=0.5))
+#dev.off()
+```
+
+
+```{r}
+#png(file="../images/drzewo_kropki.png", width=3000, height=4000, res=300)
+plot_tree(phyloseq_rare, ladderize="left", color="zbiornik", shape = "rok", size="abundance", label.tips="Genus", text.size=2, base.spacing=0.04)+ggtitle("Drzewo z kropkami składu taksonomicznego")+ theme(plot.title = element_text(size = 20, face = "bold"), text = element_text(size=20))
+#dev.off()
+```
+
+
+
+
