@@ -1,0 +1,180 @@
+--------------------------------------------------------------------------------
+ModelTest-NG vx.y.z
+
+Input data:
+  MSA:        rps16_automated.fas
+  Tree:       Maximum likelihood
+    file:           -
+  #taxa:            37
+  #sites:           922
+  #patterns:        176
+  Max. thread mem:  3 MB
+
+Output:
+  Log:           rps16_model.log
+  Starting tree: rps16_model.tree
+  Results:       rps16_model.out
+
+Selection options:
+  # dna schemes:      11
+  # dna models:       88
+  include model parameters:
+    Uniform:         true
+    p-inv (+I):      true
+    gamma (+G):      true
+    both (+I+G):     true
+    free rates (+R): false
+    fixed freqs:     true
+    estimated freqs: true
+    #categories:     4
+  gamma rates mode:   mean
+  asc bias:           none
+  epsilon (opt):      0.01
+  epsilon (par):      0.05
+  keep branches:      false
+
+Additional options:
+  verbosity:        very low
+  threads:          1/8
+  RNG seed:         12345
+  subtree repeats:  enabled
+--------------------------------------------------------------------------------
+
+BIC       model              K            lnL          score          delta    weight
+--------------------------------------------------------------------------------
+       1  TPM1uf+G4          6     -2375.7142      5277.0725         0.0000    0.5832
+       2  TPM1uf+I           6     -2376.6418      5278.9276         1.8551    0.2307
+       3  TPM1uf+I+G4        7     -2374.1653      5280.8010         3.7286    0.0904
+       4  TVM+G4             8     -2371.5608      5282.4187         5.3462    0.0403
+       5  TIM1+G4            7     -2375.5935      5283.6575         6.5851    0.0217
+       6  TVM+I              8     -2372.6232      5284.5434         7.4710    0.0139
+       7  TIM1+I             7     -2376.6194      5285.7094         8.6369    0.0078
+       8  TVM+I+G4           9     -2370.1043      5286.3321         9.2597    0.0057
+       9  TIM1+I+G4          8     -2374.0211      5287.3393        10.2669    0.0034
+      10  GTR+G4             9     -2371.3890      5288.9016        11.8292    0.0016
+--------------------------------------------------------------------------------
+Best model according to BIC
+---------------------------
+Model:              TPM1uf+G4
+lnL:                -2375.7142
+Frequencies:        0.3392 0.1552 0.1903 0.3152
+Subst. Rates:       1.0000 1.1208 0.3106 0.3106 1.1208 1.0000 
+Inv. sites prop:    -
+Gamma shape:        0.1678
+Score:              5277.0725
+Weight:             0.5832
+---------------------------
+Parameter importances
+---------------------------
+P.Inv:              0.2531
+Gamma:              0.6471
+Gamma-Inv:          0.0998
+Frequencies:        1.0000
+---------------------------
+Model averaged estimates
+---------------------------
+P.Inv:              0.7025
+Alpha:              0.1692
+Alpha-P.Inv:        0.9709
+P.Inv-Alpha:        0.5438
+Frequencies:        0.3394 0.1551 0.1901 0.3154 
+
+Commands:
+  > phyml  -i rps16_automated.fas -m 012210 -f m -v 0 -a e -c 4 -o tlr
+  > raxmlHPC-SSE3 -s rps16_automated.fas -m GTRGAMMAX -n EXEC_NAME -p PARSIMONY_SEED
+  > raxml-ng --msa rps16_automated.fas --model TPM1uf+G4
+  > paup -s rps16_automated.fas
+  > iqtree -s rps16_automated.fas -m TPM1uf+G4
+
+AIC       model              K            lnL          score          delta    weight
+--------------------------------------------------------------------------------
+       1  TVM+I+G4           9     -2370.1043      4900.2085         0.0000    0.3335
+       2  TVM+G4             8     -2371.5608      4901.1216         0.9131    0.2113
+       3  GTR+I+G4          10     -2369.9029      4901.8057         1.5972    0.1501
+       4  GTR+G4             9     -2371.3890      4902.7780         2.5695    0.0923
+       5  TVM+I              8     -2372.6232      4903.2464         3.0379    0.0730
+       6  TPM1uf+I+G4        7     -2374.1653      4904.3305         4.1220    0.0425
+       7  GTR+I              9     -2372.4724      4904.9447         4.7362    0.0312
+       8  TPM1uf+G4          6     -2375.7142      4905.4285         5.2200    0.0245
+       9  TIM1+I+G4          8     -2374.0211      4906.0423         5.8338    0.0180
+      10  TIM1+G4            7     -2375.5935      4907.1870         6.9785    0.0102
+--------------------------------------------------------------------------------
+Best model according to AIC
+---------------------------
+Model:              TVM+I+G4
+lnL:                -2370.1043
+Frequencies:        0.3436 0.1518 0.1861 0.3184
+Subst. Rates:       0.9245 1.0771 0.1902 0.6844 1.0771 1.0000 
+Inv. sites prop:    0.5438
+Gamma shape:        1.0000
+Score:              4900.2085
+Weight:             0.3335
+---------------------------
+Parameter importances
+---------------------------
+P.Inv:              0.1176
+Gamma:              0.3383
+Gamma-Inv:          0.5441
+Frequencies:        1.0000
+---------------------------
+Model averaged estimates
+---------------------------
+P.Inv:              0.7048
+Alpha:              0.1873
+Alpha-P.Inv:        0.9961
+P.Inv-Alpha:        0.5416
+Frequencies:        0.3427 0.1525 0.1862 0.3186 
+
+Commands:
+  > phyml  -i rps16_automated.fas -m 012314 -f m -v e -a e -c 4 -o tlr
+  > raxmlHPC-SSE3 -s rps16_automated.fas -m GTRGAMMAIX -n EXEC_NAME -p PARSIMONY_SEED
+  > raxml-ng --msa rps16_automated.fas --model TVM+I+G4
+  > paup -s rps16_automated.fas
+  > iqtree -s rps16_automated.fas -m TVM+I+G4
+
+AICc      model              K            lnL          score          delta    weight
+--------------------------------------------------------------------------------
+       1  TVM+I+G4           9     -2370.1043      4915.2085         0.0000    0.3150
+       2  TVM+G4             8     -2371.5608      4916.1216         0.9131    0.1995
+       3  GTR+I+G4          10     -2369.9029      4916.8057         1.5972    0.1417
+       4  GTR+G4             9     -2371.3890      4917.7780         2.5695    0.0872
+       5  TVM+I              8     -2372.6232      4918.2464         3.0379    0.0690
+       6  TPM1uf+I+G4        7     -2374.1653      4918.3305         3.1220    0.0661
+       7  TPM1uf+G4          6     -2375.7142      4919.4285         4.2200    0.0382
+       8  GTR+I              9     -2372.4724      4919.9447         4.7362    0.0295
+       9  TIM1+I+G4          8     -2374.0211      4921.0423         5.8338    0.0170
+      10  TIM1+G4            7     -2375.5935      4921.1870         5.9785    0.0159
+--------------------------------------------------------------------------------
+Best model according to AICc
+---------------------------
+Model:              TVM+I+G4
+lnL:                -2370.1043
+Frequencies:        0.3436 0.1518 0.1861 0.3184
+Subst. Rates:       0.9245 1.0771 0.1902 0.6844 1.0771 1.0000 
+Inv. sites prop:    0.5438
+Gamma shape:        1.0000
+Score:              4915.2085
+Weight:             0.3150
+---------------------------
+Parameter importances
+---------------------------
+P.Inv:              0.1193
+Gamma:              0.3408
+Gamma-Inv:          0.5399
+Frequencies:        1.0000
+---------------------------
+Model averaged estimates
+---------------------------
+P.Inv:              0.7051
+Alpha:              0.1861
+Alpha-P.Inv:        0.9948
+P.Inv-Alpha:        0.5417
+Frequencies:        0.3425 0.1527 0.1865 0.3184 
+
+Commands:
+  > phyml  -i rps16_automated.fas -m 012314 -f m -v e -a e -c 4 -o tlr
+  > raxmlHPC-SSE3 -s rps16_automated.fas -m GTRGAMMAIX -n EXEC_NAME -p PARSIMONY_SEED
+  > raxml-ng --msa rps16_automated.fas --model TVM+I+G4
+  > paup -s rps16_automated.fas
+  > iqtree -s rps16_automated.fas -m TVM+I+G4
+Done
