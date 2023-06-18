@@ -14,7 +14,7 @@ Page dedicated to the final project from the phylogenetics part of the course.
 The goal of the final project was to explore phylogeny of the tribe Apieae belonging to the botanical family Apiaceae.
 
 ## Description of the files
-* Smolik_filogeneza.pdf - final report
+* Smolik_Apieae.pdf - final report
 * data - directory where IDs and sequences of nuclear and chloroplast markers as well as linked data are located
 * alignments - directory where sequence alignments with the ClustalW, Mafft and Muscle algorithms are located
 * alignments_trimmed - directory where the trimmed sequence alignments by automated1, nogaps and strict algorithms are located
